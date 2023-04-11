@@ -4,29 +4,34 @@
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-
   "editor.formatOnSave": true,
   "editor.formatOnType": false,
   "editor.formatOnPaste": false,
-
   // Display rulers
-  "editor.rulers": [100, 120],
-
+  "editor.rulers": [
+    100,
+    120
+  ],
   // Eslint
   "eslint.enable": true,
-  "eslint.workingDirectories": ["."],
+  "eslint.workingDirectories": [
+    "."
+  ],
   "eslint.format.enable": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
   },
-
   // Easier debugging
   "debug.javascript.autoAttachFilter": "onlyWithFlag",
   "debug.javascript.terminalOptions": {
-    "skipFiles": ["<node_internals>/**", "**/node_modules"]
+    "skipFiles": [
+      "<node_internals>/**",
+      "**/node_modules"
+    ]
   },
-  "typescript.preferences.autoImportFileExcludePatterns": ["**/dist/*"],
-
+  "typescript.preferences.autoImportFileExcludePatterns": [
+    "**/dist/*"
+  ],
   // Remove build & configuration files from the sidebar
   "files.exclude": {
     // ".eslintrc.json": true,
@@ -48,7 +53,6 @@
     // "typedoc.json": true,
     // "yarn.lock": true
   },
-
   // Performance
   "files.watcherExclude": {
     "**/node_modules/**": true
@@ -61,5 +65,6 @@
       "language": "markdown",
       "scheme": "file"
     }
-  ]
+  ],
+  "window.title": "${rootName}${separator}${activeEditorShort} ${separator} [Branch: feat/poc-sse]"
 }

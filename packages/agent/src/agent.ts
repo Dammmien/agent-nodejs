@@ -12,6 +12,7 @@ import { DataSource, DataSourceFactory } from '@forestadmin/datasource-toolkit';
 import { ForestSchema } from '@forestadmin/forestadmin-client';
 import cors from '@koa/cors';
 import Router from '@koa/router';
+import EventSource from 'eventsource';
 import { readFile, writeFile } from 'fs/promises';
 import stringify from 'json-stringify-pretty-compact';
 import bodyParser from 'koa-bodyparser';
@@ -68,6 +69,24 @@ export default class Agent<S extends TSchema = TSchema> extends FrameworkMounter
     const { isProduction, logger, skipSchemaUpdate, typingsPath, typingsMaxDepth } = this.options;
 
     const dataSource = await this.customizer.getDataSource(logger);
+
+    const eventSourceInitDict = { https: { rejectUnauthorized: false } };
+    const source = new EventSource(
+      'https://api.development.forestadmin.com/liana/v4/events',
+      eventSourceInitDict,
+    );
+    //    const surce = new EventSource('http://nicola.co.caisruetaruiset');
+    // aaaa
+
+    source.addEventListener('message', message => {
+      console.log('event addEventListener message received');
+      console.log(`🚀  \x1b[45m%s\x1b[0m`, ` - Agent<S - overridestart - message:`, message);
+    });
+    source.addEventListener('message', function (e) {
+      console.log(e.data);
+    });
+    const a = 0;
+
     const [router] = await Promise.all([
       this.getRouter(dataSource),
       !skipSchemaUpdate ? this.sendSchema(dataSource) : Promise.resolve(),
