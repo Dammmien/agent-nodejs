@@ -75,8 +75,6 @@ export default class Agent<S extends TSchema = TSchema> extends FrameworkMounter
       'https://api.development.forestadmin.com/liana/v4/events',
       eventSourceInitDict,
     );
-    //    const surce = new EventSource('http://nicola.co.caisruetaruiset');
-    // aaaa
 
     source.addEventListener('message', message => {
       console.log('event addEventListener message received');
