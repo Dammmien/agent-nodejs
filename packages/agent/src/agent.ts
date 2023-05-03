@@ -83,7 +83,6 @@ export default class Agent<S extends TSchema = TSchema> extends FrameworkMounter
     source.addEventListener('message', function (e) {
       console.log(e.data);
     });
-    const a = 0;
 
     const [router] = await Promise.all([
       this.getRouter(dataSource),
