@@ -62,17 +62,10 @@ export default class Agent<S extends TSchema = TSchema> extends FrameworkMounter
     this.customizer = new DataSourceCustomizer<S>();
   }
 
-  /**
-   * Start the agent.
-   */
-  override async start(): Promise<void> {
-    const { isProduction, logger, skipSchemaUpdate, typingsPath, typingsMaxDepth } = this.options;
-
-    const dataSource = await this.customizer.getDataSource(logger);
-
+  private async subscribeToPermissionUpdates() {
     const eventSourceInitDict = { https: { rejectUnauthorized: false } };
     const source = new EventSource(
-      'https://api.development.forestadmin.com/liana/v4/events',
+      'https://api.development.forestadmin.com/liana/v4/subscribe',
       eventSourceInitDict,
     );
 
@@ -80,9 +73,16 @@ export default class Agent<S extends TSchema = TSchema> extends FrameworkMounter
       console.log('event addEventListener message received');
       console.log(`🚀  \x1b[45m%s\x1b[0m`, ` - Agent<S - overridestart - message:`, message);
     });
-    source.addEventListener('message', function (e) {
-      console.log(e.data);
-    });
+  }
+
+  /**
+   * Start the agent.
+   */
+  override async start(): Promise<void> {
+    const { isProduction, logger, skipSchemaUpdate, typingsPath, typingsMaxDepth } = this.options;
+
+    const dataSource = await this.customizer.getDataSource(logger);
+    this.subscribeToPermissionUpdates();
 
     const [router] = await Promise.all([
       this.getRouter(dataSource),
