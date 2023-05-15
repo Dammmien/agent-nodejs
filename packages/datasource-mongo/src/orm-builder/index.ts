@@ -1,49 +1,35 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Connection, Schema } from 'mongoose';
 
-import { CollectionIntrospection, NodeAnalysis, Primitive } from '../introspection/types';
+import { ModelStudyDef, NodeStudyDef, PrimitiveDef } from '../introspection/types';
 
 export default class OdmBuilder {
-  private static readonly primitives: Partial<Record<Primitive, unknown>> = {
+  private static readonly primitives: Partial<Record<PrimitiveDef, unknown>> = {
     boolean: Boolean,
     number: Number,
     string: String,
     Date,
     Binary: Buffer,
+    Mixed: Schema.Types.Mixed,
     ObjectId: Schema.Types.ObjectId,
   };
 
-  static defineModels(connection: Connection, introspection: CollectionIntrospection[]) {
-    for (const collection of introspection) {
+  static defineModels(connection: Connection, study: ModelStudyDef[]) {
+    for (const collection of study) {
       const definition = this.buildDefinition(collection.analysis);
 
       connection.model(collection.name, new Schema(definition));
     }
   }
 
-  private static buildDefinition(analysis: NodeAnalysis): unknown {
-    const types = Object.keys(analysis.types).filter(type => type !== 'null');
+  private static buildDefinition(node: NodeStudyDef): unknown {
+    if (node.type === 'array') return [this.buildDefinition(node.arrayElement!)];
 
-    if (types.length === 1) {
-      if (types[0] === 'array') {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return [this.buildDefinition(analysis.arrayElement!)];
-      }
+    if (node.type === 'object')
+      return Object.fromEntries(
+        Object.entries(node.object!).map(([path, child]) => [path, this.buildDefinition(child)]),
+      );
 
-      if (types[0] === 'object') {
-        return Object.fromEntries(
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          Object.entries(analysis.object!).map(([path, child]) => [
-            path,
-            this.buildDefinition(child),
-          ]),
-        );
-      }
-
-      if (types[0] in this.primitives) {
-        return this.primitives[types[0]];
-      }
-    }
-
-    return 'Mixed';
+    return this.primitives[node.type];
   }
 }

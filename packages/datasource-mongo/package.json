@@ -14,6 +14,7 @@
   "dependencies": {
     "@forestadmin/datasource-mongoose": "1.4.0",
     "@forestadmin/datasource-toolkit": "1.5.0",
+    "json-stringify-pretty-compact": "^3.0.0",
     "mongodb": "^5.4.0",
     "mongoose": "^7.0.1"
   },
