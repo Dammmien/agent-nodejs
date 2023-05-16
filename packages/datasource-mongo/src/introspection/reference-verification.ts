@@ -1,11 +1,10 @@
 /* eslint-disable no-underscore-dangle */
-import { Collection, Db } from 'mongodb';
 
-import { NodeStudy } from './types';
+import { MongoCollection, MongoDb, NodeStudy } from './types';
 
 export default class CandidateVerifier {
   static async filterCandidates(
-    connection: Db,
+    connection: MongoDb,
     candidatesByModel: Record<string, NodeStudy[]>,
   ): Promise<Record<string, NodeStudy[]>> {
     // Filter out all candidates where references can't be found
@@ -30,10 +29,10 @@ export default class CandidateVerifier {
    * @returns the nodes that are indeed references
    */
   private static async filterCandidatesForModel(
-    collection: Collection,
+    collection: MongoCollection,
     nodes: NodeStudy[],
   ): Promise<NodeStudy[]> {
-    const samples = nodes.reduce((memo, node) => [...memo, ...node.samples], []);
+    const samples = nodes.reduce((memo, node) => [...memo, ...node.referenceSamples], []);
     const found = new Set(
       await collection
         .find({ _id: { $in: samples } }, { projection: { _id: 1 } })
@@ -42,7 +41,7 @@ export default class CandidateVerifier {
     );
 
     return nodes.filter(node => {
-      return [...node.samples].every(sample => found.has(this.toString(sample)));
+      return [...node.referenceSamples].every(sample => found.has(this.toString(sample)));
     });
   }
 

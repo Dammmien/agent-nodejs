@@ -17,19 +17,31 @@ export default class OdmBuilder {
   static defineModels(connection: Connection, study: ModelStudyDef[]) {
     for (const collection of study) {
       const definition = this.buildDefinition(collection.analysis);
-
       connection.model(collection.name, new Schema(definition));
     }
   }
 
   private static buildDefinition(node: NodeStudyDef): unknown {
-    if (node.type === 'array') return [this.buildDefinition(node.arrayElement!)];
+    if (node.type === 'array') {
+      return [this.buildDefinition(node.arrayElement!)];
+    }
 
-    if (node.type === 'object')
-      return Object.fromEntries(
-        Object.entries(node.object!).map(([path, child]) => [path, this.buildDefinition(child)]),
-      );
+    if (node.type === 'object') {
+      const entries = Object.entries(node.object!).map(([path, child]) => [
+        path,
+        this.buildDefinition(child),
+      ]);
 
-    return this.primitives[node.type];
+      return Object.fromEntries(entries);
+    }
+
+    const result: Record<string, unknown> = {
+      type: this.primitives[node.type],
+      required: !node.nullable,
+    };
+
+    if (node.referenceTo) result.ref = node.referenceTo;
+
+    return result;
   }
 }

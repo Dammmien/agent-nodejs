@@ -1,12 +1,10 @@
-import { Db } from 'mongodb';
-
 import CandidateFinder from './reference-candidates';
 import CandidateVerifier from './reference-verification';
 import Structure from './structure';
-import { ModelStudy, ModelStudyDef, NodeStudy, NodeStudyDef, PrimitiveDef } from './types';
+import { ModelStudy, ModelStudyDef, MongoDb, NodeStudy, NodeStudyDef, PrimitiveDef } from './types';
 
 export default class Introspector {
-  static async introspect(connection: Db): Promise<ModelStudyDef[]> {
+  static async introspect(connection: MongoDb): Promise<ModelStudyDef[]> {
     const structure = await Structure.introspect(connection);
     const references = await this.findReferences(connection, structure);
 
@@ -17,7 +15,7 @@ export default class Introspector {
   }
 
   static async findReferences(
-    connection: Db,
+    connection: MongoDb,
     introspection: ModelStudy[],
   ): Promise<Map<NodeStudy, string>> {
     // Build a list of candidates by model.

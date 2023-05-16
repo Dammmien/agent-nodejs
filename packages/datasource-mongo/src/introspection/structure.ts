@@ -1,21 +1,19 @@
 /* eslint-disable no-underscore-dangle */
 
-import { Collection, Db } from 'mongodb';
-
-import { ModelStudy, NodeStudy, Primitive } from './types';
+import { ModelStudy, MongoCollection, MongoDb, NodeStudy, Primitive } from './types';
 
 export default class Structure {
   private static readonly MAX_NODES = 100;
   private static readonly MAX_SAMPLES = 10;
 
-  static async introspect(connection: Db): Promise<ModelStudy[]> {
+  static async introspect(connection: MongoDb): Promise<ModelStudy[]> {
     const collections = await connection.collections();
     const structure = collections.map(c => this.analyzeCollection(c));
 
     return Promise.all(structure);
   }
 
-  private static async analyzeCollection(collection: Collection): Promise<ModelStudy> {
+  private static async analyzeCollection(collection: MongoCollection): Promise<ModelStudy> {
     const node = this.createNode();
 
     for await (const sample of collection.find().limit(this.MAX_NODES)) {
@@ -26,7 +24,7 @@ export default class Structure {
   }
 
   private static createNode(): NodeStudy {
-    return { types: {}, seen: 0, isCandidateForReference: true, samples: new Set() };
+    return { types: {}, seen: 0, referenceSamples: new Set() };
   }
 
   private static walkNode(node: NodeStudy, sample: unknown): void {
@@ -59,14 +57,14 @@ export default class Structure {
     node.types[type] = (node.types[type] || 0) + 1;
 
     // Check if node is a potential reference candidate
-    if (node.isCandidateForReference) {
+    if (node.referenceSamples) {
       const isSingleType = Object.keys(node.types).every(t => t === type || t === 'null');
 
       if (isSingleType && this.isCandidateForReference(type, sample)) {
-        if (sample && node.samples.size < this.MAX_SAMPLES) node.samples.add(sample);
+        if (sample && node.referenceSamples.size < this.MAX_SAMPLES)
+          node.referenceSamples.add(sample);
       } else {
-        node.isCandidateForReference = false;
-        node.samples.clear();
+        delete node.referenceSamples;
       }
     }
   }

@@ -2,13 +2,22 @@
 
 import { ModelStudy, NodeStudy, Primitive } from './types';
 
+/**
+ * Build the list of potential reference candidates nodes by model.
+ *
+ * This works by walking the node tree and comparing the type of each node to the types of the
+ * primary key of each model.
+ */
 export default class CandidateFinder {
-  /** Build the list of potential reference candidates nodes by model */
   static findCandidates(introspection: ModelStudy[]): Record<string, NodeStudy[]> {
     const candidatesByModel: Record<string, NodeStudy[]> = {};
     const modelByPkType: Record<Primitive, string[]> = this.getModelsByPkType(introspection);
+
+    // Perform the first level here to skip root _id field
+    // (instead of calling findCandidatesRec on model.analysis directly)
     for (const model of introspection)
-      this.findCandidatesRec(model.analysis, modelByPkType, candidatesByModel);
+      for (const [key, subNode] of Object.entries(model.analysis.object))
+        if (key !== '_id') this.findCandidatesRec(subNode, modelByPkType, candidatesByModel);
 
     return candidatesByModel;
   }
@@ -43,7 +52,7 @@ export default class CandidateFinder {
       this.findCandidatesRec(node.arrayElement, modelByPkType, candidatesByModel);
 
     // Push node to potentialRefs[] if it is a potential reference
-    if (node.isCandidateForReference) {
+    if (node.referenceSamples) {
       const nodeTypes = Object.keys(node.types).filter(t => t !== 'null') as Primitive[];
 
       // nodeTypes.length may be zero if the node only contains null values (=> we skip it)

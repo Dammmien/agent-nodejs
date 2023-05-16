@@ -1,3 +1,8 @@
+import { Connection } from 'mongoose';
+
+export type MongoDb = Connection['db'];
+export type MongoCollection = ReturnType<MongoDb['collection']>;
+
 export type ModelStudy = { name: string; analysis: NodeStudy };
 
 export type NodeStudy = {
@@ -5,8 +10,7 @@ export type NodeStudy = {
   seen: number;
   object?: Record<string, NodeStudy>;
   arrayElement?: NodeStudy;
-  isCandidateForReference: boolean;
-  samples: Set<unknown>;
+  referenceSamples?: Set<unknown>;
 };
 
 export type Primitive =
