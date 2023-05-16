@@ -3,21 +3,26 @@
 import { ModelStudy, MongoCollection, MongoDb, NodeStudy, Primitive } from './types';
 
 export default class Structure {
-  private static readonly MAX_NODES = 100;
-  private static readonly MAX_SAMPLES = 10;
-
-  static async introspect(connection: MongoDb): Promise<ModelStudy[]> {
+  static async introspect(
+    connection: MongoDb,
+    maxDocuments: number,
+    maxReferences: number,
+  ): Promise<ModelStudy[]> {
     const collections = await connection.collections();
-    const structure = collections.map(c => this.analyzeCollection(c));
+    const structure = collections.map(c => this.analyzeCollection(c, maxDocuments, maxReferences));
 
     return Promise.all(structure);
   }
 
-  private static async analyzeCollection(collection: MongoCollection): Promise<ModelStudy> {
+  private static async analyzeCollection(
+    collection: MongoCollection,
+    maxDocuments: number,
+    maxReferences: number,
+  ): Promise<ModelStudy> {
     const node = this.createNode();
 
-    for await (const sample of collection.find().limit(this.MAX_NODES)) {
-      this.walkNode(node, sample);
+    for await (const sample of collection.find().limit(maxDocuments)) {
+      this.walkNode(node, sample, maxReferences);
     }
 
     return { name: collection.collectionName, analysis: node };
@@ -27,29 +32,33 @@ export default class Structure {
     return { types: {}, seen: 0, referenceSamples: new Set() };
   }
 
-  private static walkNode(node: NodeStudy, sample: unknown): void {
-    if (Array.isArray(sample)) this.walkArrayNode(node, sample);
+  private static walkNode(node: NodeStudy, sample: unknown, maxReferences: number): void {
+    if (Array.isArray(sample)) this.walkArrayNode(node, sample, maxReferences);
     if (sample?.constructor === Object)
-      this.walkObjectNode(node, sample as Record<string, unknown>);
+      this.walkObjectNode(node, sample as Record<string, unknown>, maxReferences);
 
-    this.annotateNode(node, sample);
+    this.annotateNode(node, sample, maxReferences);
   }
 
-  private static walkArrayNode(node: NodeStudy, sample: unknown[]): void {
+  private static walkArrayNode(node: NodeStudy, sample: unknown[], maxReferences: number): void {
     if (!node.arrayElement) node.arrayElement = this.createNode();
-    for (const subSample of sample) this.walkNode(node.arrayElement, subSample);
+    for (const subSample of sample) this.walkNode(node.arrayElement, subSample, maxReferences);
   }
 
-  private static walkObjectNode(node: NodeStudy, sample: Record<string, unknown>): void {
+  private static walkObjectNode(
+    node: NodeStudy,
+    sample: Record<string, unknown>,
+    maxReferences: number,
+  ): void {
     if (!node.object) node.object = {};
 
     for (const [key, subSample] of Object.entries(sample)) {
       if (!node.object[key]) node.object[key] = this.createNode();
-      this.walkNode(node.object[key], subSample);
+      this.walkNode(node.object[key], subSample, maxReferences);
     }
   }
 
-  private static annotateNode(node: NodeStudy, sample: unknown): void {
+  private static annotateNode(node: NodeStudy, sample: unknown, maxReferences: number): void {
     const type = this.getSampleType(sample);
 
     // Increment counters
@@ -61,8 +70,7 @@ export default class Structure {
       const isSingleType = Object.keys(node.types).every(t => t === type || t === 'null');
 
       if (isSingleType && this.isCandidateForReference(type, sample)) {
-        if (sample && node.referenceSamples.size < this.MAX_SAMPLES)
-          node.referenceSamples.add(sample);
+        if (sample && node.referenceSamples.size < maxReferences) node.referenceSamples.add(sample);
       } else {
         delete node.referenceSamples;
       }
