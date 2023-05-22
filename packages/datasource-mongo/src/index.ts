@@ -6,7 +6,7 @@ import mongoose, { Connection } from 'mongoose';
 
 import Introspection from './introspection';
 import { ModelStudyDef } from './introspection/types';
-import OdmBuilder from './orm-builder';
+import OdmBuilder from './odm-builder';
 import { IntrospectOptions, MongoOptions } from './type';
 
 export { ModelStudyDef };

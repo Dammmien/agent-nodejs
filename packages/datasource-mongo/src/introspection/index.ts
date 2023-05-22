@@ -7,7 +7,7 @@ import { IntrospectOptions } from '../type';
 export default class Introspector {
   static async introspect(
     connection: MongoDb,
-    options: IntrospectOptions['introspectionOptions'],
+    options?: IntrospectOptions['introspectionOptions'],
   ): Promise<ModelStudyDef[]> {
     const structure = await Structure.introspect(
       connection,
@@ -25,7 +25,7 @@ export default class Introspector {
       .sort(({ name: name1 }, { name: name2 }) => name1.localeCompare(name2));
   }
 
-  static async findReferences(
+  private static async findReferences(
     connection: MongoDb,
     introspection: ModelStudy[],
   ): Promise<Map<NodeStudy, string>> {
@@ -52,24 +52,21 @@ export default class Introspector {
     maxProps: number,
   ): NodeStudyDef {
     const type = this.getNodeType(node, maxProps);
+    const nullable = 'null' in node.types;
+    const referenceTo = references.get(node);
+    const defNode: NodeStudyDef = { type, nullable, referenceTo };
 
-    return {
-      type,
-      nullable: 'null' in node.types,
-      referenceTo: references.get(node),
-      arrayElement:
-        type === 'array' ? this.convert(node.arrayElement, references, maxProps) : undefined,
-      object:
-        type === 'object'
-          ? Object.fromEntries(
-              Object.entries(node.object)
-                .map(
-                  ([k, v]) => [k, this.convert(v, references, maxProps)] as [string, NodeStudyDef],
-                )
-                .sort(([k1], [k2]) => k1.localeCompare(k2)),
-            )
-          : undefined,
-    };
+    if (type === 'array')
+      defNode.arrayElement = this.convert(node.arrayElement, references, maxProps);
+
+    if (type === 'object')
+      defNode.object = Object.fromEntries(
+        Object.entries(node.object)
+          .map(([k, v]) => [k, this.convert(v, references, maxProps)] as [string, NodeStudyDef])
+          .sort(([k1], [k2]) => k1.localeCompare(k2)),
+      );
+
+    return defNode;
   }
 
   private static getNodeType(node: NodeStudy, maxPropsPerObject: number): PrimitiveDef {
