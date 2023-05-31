@@ -1,4 +1,4 @@
-import LruCache from 'lru-cache';
+import { LRUCache } from 'lru-cache';
 
 import { hashChartRequest, hashServerCharts } from './hash-chart';
 import isSegmentQueryAllowed from './is-segment-query-authorized';
@@ -23,17 +23,17 @@ export type RenderingPermission = {
 };
 
 export default class RenderingPermissionService {
-  private readonly permissionsByRendering: LruCache<string, RenderingPermission>;
+  private readonly permissionsByRendering: LRUCache<string, RenderingPermission>;
 
   constructor(
     private readonly options: ForestAdminClientOptionsWithDefaults,
     private readonly userPermissions: UserPermissionService,
     private readonly forestAdminServerInterface: ForestAdminServerInterface,
   ) {
-    this.permissionsByRendering = new LruCache({
+    this.permissionsByRendering = new LRUCache<string, RenderingPermission>({
       max: 256,
       ttl: this.options.permissionsCacheDurationInSeconds * 1000,
-      fetchMethod: renderingId => this.loadPermissions(Number(renderingId)),
+      fetchMethod: async renderingId => this.loadPermissions(Number(renderingId)),
     });
   }
 
@@ -66,10 +66,10 @@ export default class RenderingPermissionService {
     userId: number | string;
     allowRetry: boolean;
   }): Promise<RawTree> {
-    const [permissions, userInfo]: [RenderingPermission, UserPermissionV4] = await Promise.all([
+    const [permissions, userInfo] = (await Promise.all([
       this.permissionsByRendering.fetch(`${renderingId}`),
       this.userPermissions.getUserInfo(userId),
-    ]);
+    ])) as [RenderingPermission, UserPermissionV4];
 
     const collectionPermissions = permissions?.collections?.[collectionName];
 
@@ -125,9 +125,9 @@ export default class RenderingPermissionService {
     segmentQuery: string;
     allowRetry: boolean;
   }): Promise<boolean> {
-    const permissions: RenderingPermission = await this.permissionsByRendering.fetch(
+    const permissions = (await this.permissionsByRendering.fetch(
       `${renderingId}`,
-    );
+    )) as RenderingPermission;
 
     const collectionPermissions = permissions?.collections?.[collectionName];
 
@@ -210,10 +210,10 @@ export default class RenderingPermissionService {
     chartHash: string;
     allowRetry: boolean;
   }): Promise<boolean> {
-    const [userInfo, permissions] = await Promise.all([
+    const [userInfo, permissions] = (await Promise.all([
       this.userPermissions.getUserInfo(userId),
       this.permissionsByRendering.fetch(`${renderingId}`),
-    ]);
+    ])) as [UserPermissionV4, RenderingPermission];
 
     if (
       [PermissionLevel.Admin, PermissionLevel.Developer, PermissionLevel.Editor].includes(
@@ -266,9 +266,9 @@ export default class RenderingPermissionService {
   }
 
   public async getTeam(renderingId: number | string): Promise<Team> {
-    const permissions: RenderingPermission = await this.permissionsByRendering.fetch(
+    const permissions = (await this.permissionsByRendering.fetch(
       `${renderingId}`,
-    );
+    )) as RenderingPermission;
 
     return permissions.team;
   }
